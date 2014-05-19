@@ -9,6 +9,6 @@ A little app that will trivially solve connecting dots by creating a polygon wit
 ## Running
 
  1. Clone the repo
- 2. bower install
+ 2. npm install
  3. bower install
  4. grunt serve
