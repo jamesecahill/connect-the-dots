@@ -14,6 +14,8 @@ $(window).ready(function() {
 			this.isDrawn = false;
 		};
 	})();
+	//export the def
+	window.Node = Node;
 
 	var Edge;
 	// Edge closure
@@ -29,6 +31,8 @@ $(window).ready(function() {
 			this.isDrawn = false;
 		};
 	})();
+	//export the def
+	window.Edge = Edge;
 
 	var AppImpl;
 	// AppImpl closure
@@ -60,7 +64,7 @@ $(window).ready(function() {
 		var _handleNewDotNode = function(e) {
 			if (this.isDrawing) {
 				this.addDotNode(new Node(e.clientX, e.clientY));
-				this.redraw();
+				this.draw();
 			}
 		};
 
@@ -78,7 +82,8 @@ $(window).ready(function() {
 		 */
 		var _handleSolve = function() {
 			this.solve();
-			this.redraw();
+			this.draw();
+			this.updateButtons();
 		};
 
 		/**
@@ -116,20 +121,79 @@ $(window).ready(function() {
 		// ************************
 
 		/**
-		 * Solve the puzzle by connecting the dots with non-intersecting lines
+		 * Solve the puzzle by connecting the dots with non-intersecting lines. The algorithm splits
+		 * the set into an upper and lower collection of nodes, split by a middle horizontal divider.
+		 * It then connects each new set from left to right, then connects those two lines to each other,
+		 * forming a polygon. This will work for most cases, but there are some edges missed, see below.
 		 */
 		AppImpl.prototype.solve = function() {
 			if (this.isDrawing && this.dotNodes.length > 1) {
+				var minY = -1,
+					maxY = 0,
+					midY;
+				var upperNodes = [];
+				var lowerNodes = [];
+				var n, i;
+
+				//maintain app state
 				this.isDrawing = false;
-				var n;
-				for (var i=0; i<this.dotNodes.length; i++) {
+
+				//find dividing line between top and bottom nodes
+				for (i=0; i<this.dotNodes.length; i++) {
 					n = this.dotNodes[i];
-					if (i === this.dotNodes.length - 1) {
-						this.addDotEdge(n, this.dotNodes[0]);
-					} else {
-						this.addDotEdge(n, this.dotNodes[i + 1]);
+					if (minY === -1 || n.y < minY) {
+						minY = n.y;
+					}
+					if (n.y > maxY) {
+						maxY = n.y;
 					}
 				}
+				midY = minY + (maxY - minY) / 2;
+
+				//sort node list from left to right, top to bottom
+				var compareNodes = function(node1, node2) {
+					if (node1.x < node2.x) {
+						return -1;
+					} else if (node1.x > node2.x) {
+						return 1;
+					} else {
+						if (node1.y < node2.y) {
+							return -1;
+						} else if (node1.y > node2.y) {
+							return 1;
+						}
+						return 0;
+					}
+				};
+				this.dotNodes.sort(compareNodes);
+
+				//split into two arrays of upper and lower nodes
+				for (i=0; i<this.dotNodes.length; i++) {
+					n = this.dotNodes[i];
+					if (n.y > midY) {
+						lowerNodes.push(n);
+					} else {
+						upperNodes.push(n);
+					}
+				}
+
+				//connect the dots left to right
+				for (i =0; i<upperNodes.length; i++) {
+					if (i !== upperNodes.length - 1) {
+						this.addDotEdge(upperNodes[i], upperNodes[i + 1]);
+					}
+				}
+				for (i =0; i<lowerNodes.length; i++) {
+					if (i !== lowerNodes.length - 1) {
+						this.addDotEdge(lowerNodes[i], lowerNodes[i + 1]);
+					}
+				}
+
+				// connect the upper and lower lines on both ends
+				// NOTE: there are edge cases missed by this. if the lower nodes start well to the right there will be intersection
+				//       more work needed to move the default edge placement 
+				this.addDotEdge(upperNodes[0], lowerNodes[0]);
+				this.addDotEdge(upperNodes[upperNodes.length - 1], lowerNodes[lowerNodes.length - 1]);
 			}
 		};
 
@@ -160,6 +224,7 @@ $(window).ready(function() {
 					ctx.fillStyle = "#000";
 					ctx.stroke();
 					ctx.fill();
+					n.isDrawn = true;
 				}
 			}
 			//draw edges
@@ -185,7 +250,13 @@ $(window).ready(function() {
 
 			//draw nodes and edges, ignoring if they've been marked as drawn before
 			this.draw(true);
+			this.updateButtons();
+		};
 
+		/**
+		 * Update the state of the solve and reset buttons
+		 */
+		AppImpl.prototype.updateButtons = function() {
 			//update buttons
 			if (this.isDrawing) {
 				$(this.solveButtonId).show();
