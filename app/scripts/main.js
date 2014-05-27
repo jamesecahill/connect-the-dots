@@ -128,72 +128,103 @@ $(window).ready(function() {
 		 */
 		AppImpl.prototype.solve = function() {
 			if (this.isDrawing && this.dotNodes.length > 1) {
-				var minY = -1,
-					maxY = 0,
-					midY;
-				var upperNodes = [];
-				var lowerNodes = [];
-				var n, i;
+				// var minY = -1,
+				// 	maxY = 0,
+				// 	midY;
+				// var upperNodes = [];
+				// var lowerNodes = [];
+				// var n, i;
 
 				//maintain app state
 				this.isDrawing = false;
 
-				//find dividing line between top and bottom nodes
-				for (i=0; i<this.dotNodes.length; i++) {
-					n = this.dotNodes[i];
-					if (minY === -1 || n.y < minY) {
-						minY = n.y;
-					}
-					if (n.y > maxY) {
-						maxY = n.y;
-					}
-				}
-				midY = minY + (maxY - minY) / 2;
+				// //find dividing line between top and bottom nodes
+				// for (i=0; i<this.dotNodes.length; i++) {
+				// 	n = this.dotNodes[i];
+				// 	if (minY === -1 || n.y < minY) {
+				// 		minY = n.y;
+				// 	}
+				// 	if (n.y > maxY) {
+				// 		maxY = n.y;
+				// 	}
+				// }
+				// midY = minY + (maxY - minY) / 2;
 
-				//sort node list from left to right, top to bottom
+				// //sort node list from left to right, top to bottom
+				// var compareNodes = function(node1, node2) {
+				// 	if (node1.x < node2.x) {
+				// 		return -1;
+				// 	} else if (node1.x > node2.x) {
+				// 		return 1;
+				// 	} else {
+				// 		if (node1.y < node2.y) {
+				// 			return -1;
+				// 		} else if (node1.y > node2.y) {
+				// 			return 1;
+				// 		}
+				// 		return 0;
+				// 	}
+				// };
+				// this.dotNodes.sort(compareNodes);
+
+				// //split into two arrays of upper and lower nodes
+				// for (i=0; i<this.dotNodes.length; i++) {
+				// 	n = this.dotNodes[i];
+				// 	if (n.y > midY) {
+				// 		lowerNodes.push(n);
+				// 	} else {
+				// 		upperNodes.push(n);
+				// 	}
+				// }
+
+				// //connect the dots left to right
+				// for (i =0; i<upperNodes.length; i++) {
+				// 	if (i !== upperNodes.length - 1) {
+				// 		this.addDotEdge(upperNodes[i], upperNodes[i + 1]);
+				// 	}
+				// }
+				// for (i =0; i<lowerNodes.length; i++) {
+				// 	if (i !== lowerNodes.length - 1) {
+				// 		this.addDotEdge(lowerNodes[i], lowerNodes[i + 1]);
+				// 	}
+				// }
+
+				// // connect the upper and lower lines on both ends
+				// // NOTE: there are edge cases missed by this. if the lower nodes start well to the right there will be intersection
+				// //       more work needed to move the default edge placement 
+				// this.addDotEdge(upperNodes[0], lowerNodes[0]);
+				// this.addDotEdge(upperNodes[upperNodes.length - 1], lowerNodes[lowerNodes.length - 1]);
+				var weightedCenter = {};
+				var i;
+				var totalX = 0,
+				    totalY = 0;
+				for (i=0; i<this.dotNodes.length; i++) {
+					totalX += this.dotNodes[i].x;
+					totalY += this.dotNodes[i].y;
+				}
+				weightedCenter.x = totalX / this.dotNodes.length;
+				weightedCenter.y = totalY / this.dotNodes.length;
+
 				var compareNodes = function(node1, node2) {
-					if (node1.x < node2.x) {
-						return -1;
-					} else if (node1.x > node2.x) {
+					var node1Angle = Math.atan2(weightedCenter.y - node1.y, weightedCenter.x - node1.x);
+					var node2Angle = Math.atan2(weightedCenter.y - node2.y, weightedCenter.x - node2.x);
+					if (node1Angle > node2Angle) {
 						return 1;
+					} else if (node1Angle < node2Angle) {
+						return -1;
 					} else {
-						if (node1.y < node2.y) {
-							return -1;
-						} else if (node1.y > node2.y) {
-							return 1;
-						}
 						return 0;
 					}
 				};
+
 				this.dotNodes.sort(compareNodes);
-
-				//split into two arrays of upper and lower nodes
 				for (i=0; i<this.dotNodes.length; i++) {
-					n = this.dotNodes[i];
-					if (n.y > midY) {
-						lowerNodes.push(n);
+					if (i !== this.dotNodes.length - 1) {
+						this.addDotEdge(this.dotNodes[i], this.dotNodes[i+1]);
 					} else {
-						upperNodes.push(n);
+						this.addDotEdge(this.dotNodes[i], this.dotNodes[0]);
 					}
 				}
-
-				//connect the dots left to right
-				for (i =0; i<upperNodes.length; i++) {
-					if (i !== upperNodes.length - 1) {
-						this.addDotEdge(upperNodes[i], upperNodes[i + 1]);
-					}
-				}
-				for (i =0; i<lowerNodes.length; i++) {
-					if (i !== lowerNodes.length - 1) {
-						this.addDotEdge(lowerNodes[i], lowerNodes[i + 1]);
-					}
-				}
-
-				// connect the upper and lower lines on both ends
-				// NOTE: there are edge cases missed by this. if the lower nodes start well to the right there will be intersection
-				//       more work needed to move the default edge placement 
-				this.addDotEdge(upperNodes[0], lowerNodes[0]);
-				this.addDotEdge(upperNodes[upperNodes.length - 1], lowerNodes[lowerNodes.length - 1]);
 			}
 		};
 
